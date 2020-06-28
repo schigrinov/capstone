@@ -31,8 +31,8 @@ def getTEvents(gRaw, h):
         return getTEvents_mid(gRaw, h)
     tEvents, sPos, sNeg = [], 0, 0
     diff = np.log(gRaw).diff()  # bid vs bid and ask vs ask
-    diff_short = np.log(gRaw.ask / gRaw.bid.shift(1))  # we sell @bid(T-1) and buy @ask(T+0)
-    diff_long = np.log(gRaw.bid / gRaw.ask.shift(1))  # we buy @ask(T-1) and sell @bid(T+0)
+    diff_short = np.log(gRaw.ask / gRaw.bid.shift(1))  # returns from selling @bid(T-1) and buying @ask(T+0)
+    diff_long = np.log(gRaw.bid / gRaw.ask.shift(1))  # returns from buying @ask(T-1) and selling @bid(T+0)
     for i in tqdm(diff.index[1:]):
         pos, neg = sPos + diff_long.loc[i], sNeg + diff_short[i]
         sPos, sNeg = max(0., sPos + diff.ask.loc[i]), min(0., sNeg + diff.bid.loc[i])
@@ -54,7 +54,7 @@ def addVerticalBarrier(tEvents, close, numDays=1):
     :return: sorted pillars
     """
     t1 = close.index.searchsorted(tEvents + pd.Timedelta(days=numDays))
-    t1 = t1[t1 < close.shape[0]]
+    t1 = t1[t1 < close.shape[0]] #removing times that are beyond those in consideration
     t1 = (pd.Series(close.index[t1], index=tEvents[:t1.shape[0]]))
     return t1
 
