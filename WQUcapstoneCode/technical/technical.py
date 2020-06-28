@@ -30,6 +30,29 @@ class _Indicator:
         raise ValueError('Please implement this class in child classes')
 
 
+class wr(_Indicator):
+    '''Exponentially weighted moving average'''
+
+    def __init__(self, close, window = 14):
+        self.data = pd.DataFrame({'price': close})
+        low = close.rolling(window).min()
+        high = close.rolling(window).max()
+        self.data['wr'] = 100 * ((high - close) / (high - low))
+        self._switch()
+
+    @staticmethod
+    def _get_down_cross(df):
+        crit1 = df['wr'].shift(1) < 80
+        crit2 = df['wr'] > 80
+        return df.price[(crit1) & (crit2)]
+
+    @staticmethod
+    def _get_up_cross(df):
+        crit1 = df['wr'].shift(1) > 20
+        crit2 = df['wr'] < 20
+        return df.price[(crit1) & (crit2)]
+
+
 class EMA(_Indicator):
     '''Exponentially weighted moving average'''
 
@@ -83,7 +106,6 @@ class BollingerBands(_Indicator):
         crit2 = df.price < df.lower_band
         return df.price[(crit1) & (crit2)]
 
-
 class CCI:
     '''Commodity Channel Index'''
     def __init__(self, close, window=20):
@@ -131,6 +153,8 @@ class Ichimoku(_Indicator):
 
         # Senkou Span B (Leading Span B): (52-period high + 52-period low)/2))
         self.data['senkou_span_b'] = self._sen(close, senkou_window).shift(kijun_sen_window)
+
+        self.data['chikou_span'] = self.data['price'].shift(26)
 
         self._switch()
 
@@ -195,7 +219,7 @@ class RSI(_Indicator):
 def plot_indicator(indicator, from_date = None):
     if from_date is None: from_date = indicator.index[0]
     f, ax = plt.subplots()#figsize=(11, 8))
-    cols = [col for col in indicator.data.columns if col not in ['side','standard_deviation','%K','%D', 'RSI']]
+    cols = [col for col in indicator.data.columns if col not in ['side','standard_deviation','%K','%D', 'wr','RSI']]
     indicator.data[cols].loc[from_date:].plot(ax=ax, alpha=.5)
     indicator.switch_up.loc[from_date:].plot(ax=ax, ls='', marker='^', markersize=7,
                                        alpha=0.75, label='buy', color='g')
