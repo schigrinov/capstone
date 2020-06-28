@@ -31,7 +31,7 @@ class _Indicator:
 
 
 class wr(_Indicator):
-    '''Exponentially weighted moving average'''
+    '''William %R'''
 
     def __init__(self, close, window = 14):
         self.data = pd.DataFrame({'price': close})
