@@ -1,4 +1,4 @@
-,price,fast,slow,ema_side,average,upper_band,lower_band,standard_deviation,bb_side,%K,%D,so_side,CCI,tenka_sen,kijun_sen,senkou_span_a,senkou_span_b,chikou_span,ic_side,tenka_sen,kijun_sen,senkou_span_a,senkou_span_b,chikou_span,ic_side,RSI,rsi_side
+,price,fast,slow,ema_side,average,upper_band,lower_band,standard_deviation,bb_side,%K,%D,so_side,CCI,tenka_sen,kijun_sen,senkou_span_a,senkou_span_b,chikou_span,wr_side,tenka_sen,kijun_sen,senkou_span_a,senkou_span_b,chikou_span,ic_side,RSI,rsi_side
 2014-06-23 07:00:00,0.943275,0.943275,0.943275,,,,,,,,,,,,,,,,0.0,,,,,,0.0,,
 2014-06-23 19:00:00,0.9422400000000001,0.9426835714285715,0.9427230000000001,,,,,,,,,,,,,,,,0.0,,,,,,0.0,0.0,
 2014-06-24 07:00:00,0.9400999999999999,0.9415663513513514,0.9417296745562129,,,,,,,,,,,,,,,,0.0,,,,,,0.0,0.0,
