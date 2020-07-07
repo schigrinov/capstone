@@ -109,8 +109,10 @@ class BollingerBands(_Indicator):
 class CCI:
     '''Commodity Channel Index'''
     def __init__(self, close, window=20):
+        MA = close.rolling(window).mean()
+        MeanDeviation = np.abs(close - MA).rolling(window).mean()
         self.data = pd.DataFrame({'price': close,
-                                  'CCI': pd.Series((close - close.rolling(window).mean()) / (0.015 * close.rolling(window).std()))
+                                  'CCI': pd.Series((close - MA) / (0.015 * MeanDeviation))
                                   })
     def __call__(self, *args, **kwargs):
         return self.data
