@@ -2,20 +2,118 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 from tqdm import tqdm
+import pyfolio as pf
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.metrics import *
+
+
+def get_feature_types(X_train, Y_train, \
+                      rfc = RandomForestClassifier(criterion='entropy', class_weight='balanced_subsample', \
+                                                   bootstrap=False, random_state=1)): # these are RF parameters recommended in the book)
+    all_feature_cols = list(X_train.columns)
+    frdif_feature_dict = {c[:-6]: c for c in all_feature_cols if c[-5:] == 'frdif'}
+    ex_frdiff_cols = [c for c in all_feature_cols if c not in frdif_feature_dict.values()]
+    frdiff_cols = [c for c in all_feature_cols if c not in frdif_feature_dict.keys()]
+
+    rfc.fit(X_train,Y_train)
+    # selecting the most important features
+    feat_imp = pd.DataFrame({'Importance':rfc.feature_importances_})
+    feat_imp['feature'] = X_train.columns
+    top_feat = list(feat_imp[feat_imp.Importance>0.01].feature)
+
+    return all_feature_cols, ex_frdiff_cols, frdiff_cols, top_feat
+
+
+def get_pyfolio_simple_tear_sheet(mdl,X_tr, Y_tr, X_tst, Y_tst, rtns_actual):
+    mdl.fit(X_tr, Y_tr)
+    predicted_labels = pd.Series(mdl.predict(X_tst), index = Y_tst.index)
+    rtns = predicted_labels * rtns_actual
+    pf.create_simple_tear_sheet(rtns)
+
+
+def train_valid_test_split(data, proportions='50:25:25'):
+    """
+    Splits the data into 3 parts - training, validation and test sets
+    :param proportions: proportions for the split, like 2:1:1 or 50:30:20
+    :param data: preprocessed data
+    :return: X_train, Y_train, target_rtns_train, X_valid, Y_valid, target_rtns_valid, X_test, Y_test, target_rtns_test
+    """
+    features = [c for c in data.columns if c not in ('ret','bin')]
+    n = len(data)
+    borders = [float(p) for p in proportions.split(':')]
+    borders = borders / np.sum(borders)
+
+    train_ids = (0, int(np.floor(n * borders[0])))
+    valid_ids = (train_ids[1] + 1, int(np.floor(n * np.sum(borders[:2]))))
+    test_ids = (valid_ids[1] + 1, n)
+
+    X_train = data[features].iloc[train_ids[0]:train_ids[1], :]
+    X_valid = data[features].iloc[valid_ids[0]:valid_ids[1], :]
+    X_test = data[features].iloc[test_ids[0]:test_ids[1], :]
+
+    Y_train = data.bin.iloc[train_ids[0]:train_ids[1]]
+    Y_valid = data.bin.iloc[valid_ids[0]:valid_ids[1]]
+    Y_test = data.bin.iloc[test_ids[0]:test_ids[1]]
+
+    target_rtns_train = data.ret.iloc[train_ids[0]:train_ids[1]]
+    target_rtns_valid = data.ret.iloc[valid_ids[0]:valid_ids[1]]
+    target_rtns_test = data.ret.iloc[test_ids[0]:test_ids[1]]
+
+    return X_train, Y_train, target_rtns_train, X_valid, Y_valid, target_rtns_valid, X_test, Y_test, target_rtns_test
+
+
+
+def cv_split(size, n_splits=3):
+    indices = np.arange(size)
+    test_starts = [
+        (i[0], i[-1] + 1) for i in np.array_split(np.arange(size), n_splits)
+    ]
+
+    for i, j in test_starts:
+        test_indices = indices[i:j]
+        train_indices = np.array(list(set(indices) - set(test_indices)))
+        yield  train_indices, test_indices
+
+
+# TODO: can be easily improved using numba
+def cv_with_custom_score(mdl, X, Y, rtn, n_folds=3):
+    '''
+    Calculates average annualised daily return and sharp ratio based pn cross-validation
+    (result may be different from pyfolio, but good enough for our purpose)
+    :param mdl: model
+    :param X: features
+    :param Y: labels
+    :param rtn: returns
+    :param n_folds: splits in cross validation
+    :return: avg. daily return and sharp ratio (annualised)
+    '''
+    cv = cv_split(Y.shape[0], n_folds)
+    rtns_testing = pd.Series()
+    for split in cv:
+        X_train, Y_train = X.iloc[split[0]], Y.iloc[split[0]]
+        X_test = X.iloc[split[1]]
+        case_rtn = mdl.fit(X_train, Y_train).predict(X_test) * rtn.iloc[split[1]]
+        rtns_testing = rtns_testing.append(case_rtn)
+    days = np.busday_count(Y.index.min().date(),Y.index.max().date())
+    rtns_volatility_test = np.std(rtns_testing.groupby(rtns_testing.index.date).sum()) * np.sqrt(252)
+    # arithmetic return is good enough
+    rtns_testing = np.sum(rtns_testing) * 252 / days #(np.cumprod(rtns_testing+1)[-1]-1) * 252 / days
+
+    return rtns_testing, rtns_testing/rtns_volatility_test
+
 
 class PurgedKFold(_BaseKFold):
     """
     Extend KFold class to work with labels that span intervals
     The train is purged of observations overlapping test-label intervals
-    Test set is assumed contiguous (shuffle=False), w/o training samples in between
+    Test set is assumed continuous (shuffle=False), w/o training samples in between
     """
     def __init__(self,n_splits=3,t1=None,pctEmbargo=0.):
         if not isinstance(t1,pd.Series):
