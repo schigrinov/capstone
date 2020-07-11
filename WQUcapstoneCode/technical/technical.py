@@ -7,7 +7,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
+# Default Indicator class 
 class _Indicator:
 
     def __call__(self, *args, **kwargs):
@@ -32,6 +32,7 @@ class _Indicator:
 
 class wr(_Indicator):
     '''William %R'''
+    '''Here we adopt the standard William % R setup when the indicators just goes below 20% or goes above 80% '''
 
     def __init__(self, close, window = 14):
         self.data = pd.DataFrame({'price': close})
@@ -54,7 +55,7 @@ class wr(_Indicator):
 
 
 class EMA(_Indicator):
-    '''Exponentially weighted moving average'''
+    '''Exponentially weighted moving average with slow MA(7) and faster MA(3)'''
 
     def __init__(self, close, fast_ma=3, slow_ma=7):
         self.data = pd.DataFrame({'price': close,
@@ -76,6 +77,8 @@ class EMA(_Indicator):
 
 
 class BollingerBands(_Indicator):
+    
+    '''BollingerBanks with standard 20-period window and 2 st.d.'''
 
     def __init__(self, close, window=20, numsd=2):
         self._calc_bbands(close, window, numsd)
@@ -107,7 +110,8 @@ class BollingerBands(_Indicator):
         return df.price[(crit1) & (crit2)]
 
 class CCI:
-    '''Commodity Channel Index'''
+    '''Commodity Channel Index with standard 20-period window and 0.015 divisor '''
+    '''Here we do a modification by replacing typical price as the average of high, low and close price with closs price only '''
     def __init__(self, close, window=20):
         MA = close.rolling(window).mean()
         MeanDeviation = np.abs(close - MA).rolling(window).mean()
@@ -118,7 +122,7 @@ class CCI:
         return self.data
 
 class Stochastic(_Indicator):
-    '''Stochastic Oscillator'''
+    '''Stochastic Oscillator with standard 20-period window, and overbought and oversell signal as 80 and 20'''
     def __init__(self, close, window=20, stoch_window=3):
         self.data = pd.DataFrame({'price': close})
         low = close.rolling(window).min()
@@ -143,7 +147,7 @@ class Stochastic(_Indicator):
 
 
 class Ichimoku(_Indicator):
-    '''Ichimoku Kinko Hyo'''
+    '''Ichimoku Kinko Hyo standard setup for 9-period tenka_sen_window, 26-period kijun_sen_window and 52-period senkou_window'''
     def __init__(self, close, tenka_sen_window=9, kijun_sen_window=26, senkou_window=52):
         self.data = pd.DataFrame({'price': close})
 
@@ -156,6 +160,7 @@ class Ichimoku(_Indicator):
         # Senkou Span B (Leading Span B): (52-period high + 52-period low)/2))
         self.data['senkou_span_b'] = self._sen(close, senkou_window).shift(kijun_sen_window)
 
+        # Chikou_span as last 26-period price
         self.data['chikou_span'] = self.data['price'].shift(26)
 
         self._switch()
@@ -185,7 +190,7 @@ class Ichimoku(_Indicator):
 
 
 class RSI(_Indicator):
-    '''Relative Strength Index (using EMA)'''
+    '''Relative Strength Index (using EMA) with standard setup of 14-period window, overbought and oversell signal of 70 and 30 '''
     def __init__(self, close, window=14):
         self.data = pd.DataFrame({'price': close})
 
@@ -217,7 +222,7 @@ class RSI(_Indicator):
         crit2 = df['RSI'] < 30
         return df.price[(crit1) & (crit2)]
 
-
+# Plot helper functions
 def plot_indicator(indicator, from_date = None):
     if from_date is None: from_date = indicator.index[0]
     f, ax = plt.subplots()#figsize=(11, 8))
@@ -229,7 +234,7 @@ def plot_indicator(indicator, from_date = None):
                                          alpha=0.75, label='sell', color='r')
     ax.legend()
 
-
+# rolling correlation function with rolling 20-period window with 1 day lag
 def rolling_autocorr(px, window=20, lag=1):
     return pd.Series(px
     .rolling(window=window, min_periods=window, center=False)
