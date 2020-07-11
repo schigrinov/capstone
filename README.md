@@ -20,4 +20,5 @@ Required libraries:
 * lightgbm, xgboost - ML algos - didn't make it into the final ensemble - they're too good, so prone to overfitting
 
 The high-level diagram is below:
+
 ![Des](https://github.com/schigrinov/capstone/blob/master/results/Diagram.PNG)
