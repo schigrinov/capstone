@@ -1,4 +1,4 @@
-# WQU Capstone project - Short-term trading strategy using ML
+# WQU Capstone project - Short-term currency trading strategy using ML
 ## Master of Sciense in Financial Engeneering program
 
 * Sergey Chigrinov - chigrinov.s.88@gmail.com
