@@ -32,13 +32,9 @@ def get_feature_types(X_train, Y_train, \
 
 
 def get_pyfolio_simple_tear_sheet(mdl,X_tr, Y_tr, X_tst, Y_tst, rtns_actual):
-    # 1. Fit model using training set
     mdl.fit(X_tr, Y_tr)
-    # 2. Predict labels using trained model
     predicted_labels = pd.Series(mdl.predict(X_tst), index = Y_tst.index)
-    # 3. Calculate return using the predicted labels together the return vector
     rtns = predicted_labels * rtns_actual
-    # 4. Generate term sheet using the backtest portfolio return vector using PyFolio package
     pf.create_simple_tear_sheet(rtns)
 
 
@@ -105,20 +101,15 @@ def cv_with_custom_score(mdl, X, Y, rtn, n_folds=3):
         X_test = X.iloc[split[1]]
         case_rtn = mdl.fit(X_train, Y_train).predict(X_test) * rtn.iloc[split[1]]
         rtns_testing = rtns_testing.append(case_rtn)
-    
-    # Calculate the number of days between as we are using intraday data with 4-hour interval rather than daily data.
-    days = np.busday_count(Y.index.min().date(),Y.index.max().date())
-    
-    # Here we annualize daily volatility using the squaring of time rule, by assuming the daily returns are iid.    
-    rtns_volatility_test = np.std(rtns_testing.groupby(rtns_testing.index.date).sum()) * np.sqrt(252)
-    # Here w annualize daily return by using arithmetic return as prooxy
-    rtns_testing = np.sum(rtns_testing) * 252 / days 
-    
-    # Annualize geometric return not implemented
-    #(np.cumprod(rtns_testing+1)[-1]-1) * 252 / days
 
-    # function return annualized return and Sharpe Ratio as annualized return - annualized volatility
-    return rtns_testing, rtns_testing/rtns_volatility_test
+    return pf.timeseries.perf_stats(rtns_testing)
+
+
+def get_stat_means_frame(stat_dict, stat_name):
+    filtered_dict = {cur: {feature_name: {model_name: stat[stat_name] for model_name, stat in model.items()} \
+                                                                    for feature_name, model in feature.items()} \
+                                                                    for cur, feature in stat_dict.items()}
+    return pd.concat([pd.DataFrame(v) for k, v in filtered_dict.items()]).groupby(level=0).mean()
 
 
 class PurgedKFold(_BaseKFold):
@@ -156,6 +147,9 @@ from sklearn.model_selection import StratifiedKFold
 
 
 def crossValPlot(skf,classifier,X_,y_):
+    """Code adapted from:
+        
+    """
     
     X = np.asarray(X_)
     y = np.asarray(y_)
