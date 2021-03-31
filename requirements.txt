@@ -66,7 +66,7 @@ kiwisolver==1.1.0
 lazy-object-proxy==1.4.3
 lightgbm==2.3.0
 llvmlite==0.33.0+1.g022ab0f
-lxml==4.5.0
+lxml==4.6.3
 Markdown==3.1.1
 MarkupSafe==1.1.1
 matplotlib==3.1.3
